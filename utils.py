@@ -353,14 +353,39 @@ def _plot_normalized_OJIP(
             ojip_points_time= ojip_points.loc[didx(strain=strain, condition=condition,replicate=levels["replicates"][(strain,condition)],treatment=treatment), point_x_selector].mean()
             ojip_points_value = ojip_points.loc[didx(strain=strain, condition=condition,replicate=levels["replicates"][(strain,condition)],treatment=treatment), point_y_selector].mean()
 
+            ax.scatter(
+                ojip_points_time, ojip_points_value,
+                marker='x',
+                s=70,                    # Size in points^2; roughly matches markersize=9
+                color='white',            # Marker face color (doesn’t fill 'x', but used for lines)
+                linewidths=3,             # Thickness of the "x" lines
+            )
+
             ax.plot(
                 ojip_points_time,
                 ojip_points_value,
                 marker="x",
                 ls="",
                 c="k",
-                label=point_label if treatment == treatments_select[-1] else None
+                markerfacecolor='black',
+                label=point_label if treatment == treatments_select[-1] else None,
             )
+
+            # ax.scatter(
+            #     ojip_points_time, ojip_points_value,
+            #     marker='x',
+            #     s=80,                    # Size in points^2; roughly matches markersize=9
+            #     color='white',            # Marker face color (doesn’t fill 'x', but used for lines)
+            #     linewidths=3,             # Thickness of the "x" lines
+            # )
+
+            # ax.scatter(
+            #     ojip_points_time, ojip_points_value,
+            #     marker='x',
+            #     s=60,                    # Size in points^2; roughly matches markersize=9
+            #     color='black',            # Marker face color (doesn’t fill 'x', but used for lines)
+            #     linewidths=1.5,             # Thickness of the "x" lines
+            # )
 
 
     ax.grid(which="both")
@@ -370,7 +395,7 @@ def _plot_normalized_OJIP(
     # Mark the VJ point timing
     if VJ_timing is not None:
         VJ_time = VJ_timing.loc[:, strain, condition].iloc[0]
-        ax.axvline(VJ_time, c="k", ls="--")
+        ax.axvline(VJ_time, c="k", ls="--", alpha=0.5)
         ax.text(VJ_time*VJ_text_loc[0], VJ_text_loc[1], f"V$_{{J}}$ ({VJ_time:.2f} ms)", va="top", ha="right")
 
     if legend:
