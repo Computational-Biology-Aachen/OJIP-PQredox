@@ -813,6 +813,210 @@ def get_base_plot(
         }
         return fig, axes, res
 
+from utils import _plot_normalized_OJIP, log_tick_formatter
+
+def get_base_plot_MV(
+    ojip_norm,
+    ojip_norm_meansd,
+    ojip_points,
+    VJ_timing,
+    VJ_values,
+    VJ_values_meansd,
+    levels,
+    treatment_label="TREATMENT UNIT",
+    treatment_format="{treatment}",
+    treatment_0_label=None,
+    treatments_select=None,
+    treatment_center=None,
+    plot_replicates = False,
+    use_colorbar = False,
+    mark_sampled = True,
+    cmap = cm.coolwarm,
+    plot_strains = ["Syn", "Chlo"],
+    row_label_ys = [1, 0.49],
+    right_column_y_label="V$_{J}$ (r.u.)",
+    left_column_y_label = "Double normalized Fluorescence (r.u.)",
+    right_column_mark_zero=False,
+    strain_map = {
+        "Syn": r'$\mathit{\boldsymbol{Synechocystis}}$',
+        "Chlo": r'$\mathit{\boldsymbol{Chlorella}}$'
+    },
+    light_phases=None,
+    broken_logx_firstvalue=False,
+    right_column_legend_loc="lower right",
+    variance_sleeve_alpha=0.6,
+    point_x_selector= ("inflection", "FJ_time"),
+    point_y_selector= ("inflection", "FJ_value"),
+    point_label="Inflection point",
+    return_subplot_arguments=False,
+    ojip_ymin=None,
+    ojip_ymax=None,
+    feature_ymin=None,
+    feature_ymax=None,
+):
+
+    fig, axes = plt.subplots(
+        2, 
+        3, 
+        # sharex="col", 
+        sharey="col",
+        figsize=(15,10),
+    )
+
+    colornorm = lambda x:x
+
+    # Define the order of the plots
+    plot_conditions = ["lowCO2", "highCO2"]
+    plot_conditions_colors = {
+        "highCO2": np.array((0,176,80,255))/255,
+        "lowCO2": np.array((146,208,80,255))/255
+    }
+
+    plot_treatments_hatch = {
+        0: None,
+        1: "//"
+    }
+
+    # Map the names of the conditions
+    conditions_map = {
+        "lowCO2": "Air",
+        "highCO2": "High CO$_{2}$",
+    }
+
+    markers = {
+        "lowCO2": "^",
+        "highCO2": "o",
+    }
+
+    # If no selected treatments were given, use all
+    if treatments_select is None:
+        treatments_select = np.sort(np.unique(np.concatenate(levels["treatments"].values)))
+
+
+    # Plot the double normalized ojip curves
+    for i, strain in enumerate(plot_strains):
+        conditions = [c for c in plot_conditions if c in levels["conditions"][strain]]
+        for j, condition in enumerate(conditions):
+            ax = axes[i,j]
+
+            fig, ax = _plot_normalized_OJIP(
+                fig=fig,
+                ax=ax,
+                strain=strain,
+                condition=condition,
+                levels=levels,
+                ojip_norm=ojip_norm,
+                ojip_norm_meansd=ojip_norm_meansd,
+                ojip_points=ojip_points,
+                VJ_timing=VJ_timing,
+                colornorm=colornorm,#
+                conditions_map=conditions_map,
+                treatment_label=treatment_label,
+                treatment_format=treatment_format,
+                treatment_0_label=treatment_0_label,
+                treatments_select=treatments_select,
+                treatment_center=treatment_center,
+                use_colorbar = use_colorbar,
+                cmap = cmap,
+                variance_sleeve_alpha=variance_sleeve_alpha,
+                point_x_selector= point_x_selector,
+                point_y_selector= point_y_selector,
+                point_label=point_label,
+                plot_replicates=plot_replicates,
+            )
+
+            # Set the given ylims
+            if ojip_ymin is not None or ojip_ymax is not None:
+                ax.set_ylim(ojip_ymin, ojip_ymax)
+
+            # Plot the VJ value
+            ax = axes[i,-1]
+
+            if broken_logx_firstvalue:
+                treatments = levels["treatments"][strain][1:]
+            else:
+                treatments = levels["treatments"][strain]
+
+            if True:
+                try:
+                    dat = VJ_values_meansd["mean"].loc[didx(strain=strain, condition=condition,replicate=None,treatment=treatments)].dropna().droplevel([0,1,2])
+                except KeyError:
+                    ax.grid(which="both")
+                    continue
+                
+                treatment_levels = dat.index.get_level_values("Treatment").to_numpy()
+
+                dat_sd = VJ_values_meansd["sd"].loc[didx(strain=strain, condition=condition,replicate=None,treatment=treatments)].dropna().droplevel([0,1,2])
+
+                n_conditions = len(conditions)
+                bar_width = 0.35
+
+                # Plot each treatment as a set of bars
+                for t, treatment in enumerate(treatments):
+                    bar_positions = j + (t - 0.5) * bar_width
+                    heights = dat[treatment]
+                    errors = dat_sd[treatment]
+                    
+                    ax.bar(
+                        bar_positions,
+                        heights,
+                        yerr=errors,
+                        width=bar_width,
+                        color=plot_conditions_colors[condition],
+                        edgecolor='k',
+                        capsize=3,
+                        label=(treatment_format.format(treatment=treatment) if treatment!=0 or treatment_0_label is None else treatment_0_label) if j==0 else None,
+                        hatch = plot_treatments_hatch[treatment],
+                        zorder=3
+                    )
+
+                # X-axis labels and ticks
+                ax.set_xticks(np.arange(len(conditions)))
+                ax.set_xticklabels([conditions_map[c] for c in conditions])
+
+            ax.legend(loc=right_column_legend_loc)# prop={'size': 9})
+            ax.grid(which="both")
+
+    for ax in axes[:,-1]:
+        ax.grid(True, zorder=0)
+        if not broken_logx_firstvalue:
+            ax.set_ylabel(right_column_y_label)
+        else:
+            ax.xaxis.set_major_formatter(mticker.FuncFormatter(log_tick_formatter))
+
+        ax.set_xlabel(treatment_label)
+
+        # Set the given ylims
+        if feature_ymin is not None or feature_ymax is not None:
+            ax.set_ylim(feature_ymin, feature_ymax)
+
+    # for ax in axes[:,:-1].flatten():
+    for ax in axes[:,:-1].flatten():
+        ax.set_xlabel("Time (ms)")
+        ax.set_xscale("log")
+        ax.xaxis.set_major_formatter(mticker.FuncFormatter(log_tick_formatter))
+
+    # Set the y labels
+    for ax in axes[:, :2].flatten():
+        ax.set_ylabel(left_column_y_label)
+
+    fig.tight_layout()
+    fig.subplots_adjust(hspace=0.3)
+
+    # Add row labels
+    for y, strain in zip(row_label_ys ,plot_strains):
+        fig.text(0.045,y, strain_map[strain], weight='bold', size=20)
+
+    # Add figure labels
+    for i, ax in enumerate(axes.flatten()):
+        # y= 0.1 if (i+1)%3==0 else 0.9
+        # ax.text(y,0.1,chr(65+i), transform=ax.transAxes, weight='bold', size=20)
+        x = 0.07 if not (broken_logx_firstvalue and (i+1)%3==0) else -0.03
+        ax.text(x,0.9,chr(65+i), transform=ax.transAxes, weight='bold', size=20)
+
+    return fig, axes
+
+
 lightbarmap ={
     "dark":{"facecolor":"k", "label":"Dark", "labelcolor":"white"},
     "white":{"facecolor":"w", "label":"Light"},
