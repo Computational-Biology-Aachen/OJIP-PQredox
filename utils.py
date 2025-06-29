@@ -21,6 +21,8 @@ label_bbox=dict(
         alpha=0.7                  # Semi-transparency
     )
 
+default_figsize=(15,10)
+
 def add_and_format_df(df, index, full_df, ind, files, index_fields, remeasured_df=None):
     file = files[index]
 
@@ -304,6 +306,7 @@ def _plot_normalized_OJIP(
     legend=True,
     title=True,
     VJ_text_loc=(0.8, 0),
+    include_analysis=True,
 ):
     for k, treatment in enumerate(levels["treatments"][strain]):
 
@@ -334,10 +337,24 @@ def _plot_normalized_OJIP(
                 ax.grid(which="both")
                 continue
 
+            # Determine the data's label for the legend
+            if use_colorbar:
+                label=None
+            else:
+                if treatment!=0 or treatment_0_label is None:
+                    if isinstance(treatment_format, str):
+                        label = treatment_format.format(treatment=treatment)
+                    elif callable(treatment_format):
+                        label = treatment_format(treatment)
+                    else:
+                        raise ValueError("unknown type of treatment_format")
+                else:
+                    label = treatment_0_label
+
             ax.plot(
                 dat,
                 ls="-",
-                label=(treatment_format.format(treatment=treatment) if treatment!=0 or treatment_0_label is None else treatment_0_label) if not use_colorbar else None,
+                label=label,
                 c=cmap(colornorm(treatment)) if k!=0 else "k",
                 # zorder=1
             )
@@ -356,43 +373,44 @@ def _plot_normalized_OJIP(
 
 
         # Add the timing of the inflection point
-        if ojip_points is not None:
-            ojip_points_time= ojip_points.loc[didx(strain=strain, condition=condition,replicate=levels["replicates"][(strain,condition)],treatment=treatment), point_x_selector].mean()
-            ojip_points_value = ojip_points.loc[didx(strain=strain, condition=condition,replicate=levels["replicates"][(strain,condition)],treatment=treatment), point_y_selector].mean()
+        if include_analysis:
+            if ojip_points is not None:
+                ojip_points_time= ojip_points.loc[didx(strain=strain, condition=condition,replicate=levels["replicates"][(strain,condition)],treatment=treatment), point_x_selector].mean()
+                ojip_points_value = ojip_points.loc[didx(strain=strain, condition=condition,replicate=levels["replicates"][(strain,condition)],treatment=treatment), point_y_selector].mean()
 
-            ax.scatter(
-                ojip_points_time, ojip_points_value,
-                marker='x',
-                s=70,                    # Size in points^2; roughly matches markersize=9
-                color='white',            # Marker face color (doesn’t fill 'x', but used for lines)
-                linewidths=3,             # Thickness of the "x" lines
-            )
+                ax.scatter(
+                    ojip_points_time, ojip_points_value,
+                    marker='x',
+                    s=70,                    # Size in points^2; roughly matches markersize=9
+                    color='white',            # Marker face color (doesn’t fill 'x', but used for lines)
+                    linewidths=3,             # Thickness of the "x" lines
+                )
 
-            ax.plot(
-                ojip_points_time,
-                ojip_points_value,
-                marker="x",
-                ls="",
-                c="k",
-                markerfacecolor='black',
-                label=point_label if treatment == treatments_select[-1] else None,
-            )
+                ax.plot(
+                    ojip_points_time,
+                    ojip_points_value,
+                    marker="x",
+                    ls="",
+                    c="k",
+                    markerfacecolor='black',
+                    label=point_label if treatment == treatments_select[-1] else None,
+                )
 
-            # ax.scatter(
-            #     ojip_points_time, ojip_points_value,
-            #     marker='x',
-            #     s=80,                    # Size in points^2; roughly matches markersize=9
-            #     color='white',            # Marker face color (doesn’t fill 'x', but used for lines)
-            #     linewidths=3,             # Thickness of the "x" lines
-            # )
+                # ax.scatter(
+                #     ojip_points_time, ojip_points_value,
+                #     marker='x',
+                #     s=80,                    # Size in points^2; roughly matches markersize=9
+                #     color='white',            # Marker face color (doesn’t fill 'x', but used for lines)
+                #     linewidths=3,             # Thickness of the "x" lines
+                # )
 
-            # ax.scatter(
-            #     ojip_points_time, ojip_points_value,
-            #     marker='x',
-            #     s=60,                    # Size in points^2; roughly matches markersize=9
-            #     color='black',            # Marker face color (doesn’t fill 'x', but used for lines)
-            #     linewidths=1.5,             # Thickness of the "x" lines
-            # )
+                # ax.scatter(
+                #     ojip_points_time, ojip_points_value,
+                #     marker='x',
+                #     s=60,                    # Size in points^2; roughly matches markersize=9
+                #     color='black',            # Marker face color (doesn’t fill 'x', but used for lines)
+                #     linewidths=1.5,             # Thickness of the "x" lines
+                # )
 
 
     ax.grid(which="both")
@@ -460,6 +478,9 @@ def get_base_plot(
     ojip_ymax=None,
     feature_ymin=None,
     feature_ymax=None,
+    colornorm=None,
+    include_analysis=True,
+    figsize=default_figsize
 ):
 
     fig, axes = plt.subplots(
@@ -467,22 +488,22 @@ def get_base_plot(
         3, 
         # sharex="col", 
         sharey="col",
-        figsize=(15,10),
+        figsize=figsize,# if include_analysis else (10,10),
     )
 
     # cmap = cm.cool
-
-    if use_colorbar or treatment_center is None:
-        colornorm = plt.Normalize(
-            levels["treatments"].apply(np.min).min(),
-            levels["treatments"].apply(np.max).max()
-        )
-    else:
-        colornorm = colors.TwoSlopeNorm(
-            vmin=levels["treatments"].apply(np.min).min(),
-            vcenter=treatment_center,
-            vmax=levels["treatments"].apply(np.max).max()
-        )
+    if colornorm is None:
+        if use_colorbar or treatment_center is None:
+            colornorm = plt.Normalize(
+                levels["treatments"].apply(np.min).min(),
+                levels["treatments"].apply(np.max).max()
+            )
+        else:
+            colornorm = colors.TwoSlopeNorm(
+                vmin=levels["treatments"].apply(np.min).min(),
+                vcenter=treatment_center,
+                vmax=levels["treatments"].apply(np.max).max()
+            )
 
     # Define the order of the plots
     plot_conditions = ["lowCO2", "highCO2"]
@@ -536,6 +557,7 @@ def get_base_plot(
                 point_y_selector= point_y_selector,
                 point_label=point_label,
                 plot_replicates=plot_replicates,
+                include_analysis=include_analysis,
             )
 
             # Set the given ylims
@@ -543,168 +565,25 @@ def get_base_plot(
                 ax.set_ylim(ojip_ymin, ojip_ymax)
 
             # Plot the VJ value
-            ax = axes[i,-1]
-
-            if broken_logx_firstvalue:
-                treatments = levels["treatments"][strain][1:]
-            else:
-                treatments = levels["treatments"][strain]
-
-            if plot_replicates:
-                for r, replicate in enumerate(levels["replicates"][(strain,condition)]):
-                    try:
-                        dat = VJ_values.loc[didx(strain=strain, condition=condition,replicate=replicate,treatment=treatments)].dropna()
-                    except KeyError:
-                        ax.grid(which="both")
-                        continue
-                    
-                    treatment_levels = dat.index.get_level_values("Treatment").to_numpy()
-
-                    ax.plot(
-                        treatment_levels,
-                        dat,
-                        marker=markers[condition],
-                        ls="-",
-                        label=condition if r==0 else None,
-                        c = plot_conditions_colors[condition]
-                    )
-            
-            else:
-                try:
-                    dat = VJ_values_meansd["mean"].loc[didx(strain=strain, condition=condition,replicate=None,treatment=treatments)].dropna().droplevel([0,1,2])
-                except KeyError:
-                    ax.grid(which="both")
-                    continue
-                
-                treatment_levels = dat.index.get_level_values("Treatment").to_numpy()
-
-                # ax.plot(
-                #     treatment_levels,
-                #     dat,
-                #     marker="o",
-                #     ls="-",
-                #     label=condition,
-                #     c = plot_conditions_colors[condition]
-                # )
-
-                dat_sd = VJ_values_meansd["sd"].loc[didx(strain=strain, condition=condition,replicate=None,treatment=treatments)].dropna().droplevel([0,1,2])
-
-                ax.errorbar(
-                    dat.index.to_numpy(),
-                    dat,
-                    yerr=dat_sd.to_numpy().flatten(),
-                    marker=markers[condition],
-                    ls="-",
-                    label=conditions_map[condition],
-                    c = plot_conditions_colors[condition],
-                    markeredgecolor="k",
-                    ecolor='k',
-                    capsize=3
-                )
-
-                if not use_colorbar and mark_sampled:
-                    for k, treatment in enumerate(treatments):
-
-                        if treatment not in treatments_select:
-                            continue
-                        
-                        ax.errorbar(
-                            treatment,
-                            dat.loc[treatment],
-                            yerr=dat_sd.loc[treatment],
-                            marker=markers[condition],
-                            ls="",
-                            c = plot_conditions_colors[condition],
-                            markeredgecolor="k",
-                            markeredgewidth=2,
-                            # markersize=8,
-                            ecolor='k',
-                        )
-
-            ax.legend(loc=right_column_legend_loc)# prop={'size': 9})
-            ax.grid(which="both")
-
-            if right_column_mark_zero:
-                ax.axhline(0, c="k", ls="--")
-
-    for ax in axes[:,-1]:
-        ax.grid(True)
-        if not broken_logx_firstvalue:
-            ax.set_ylabel(right_column_y_label)
-        else:
-            ax.xaxis.set_major_formatter(mticker.FuncFormatter(log_tick_formatter))
-
-        ax.set_xlabel(treatment_label)
-
-        # Set the given ylims
-        if feature_ymin is not None or feature_ymax is not None:
-            ax.set_ylim(feature_ymin, feature_ymax)
-
-    for ax in axes[:,:-1].flatten():
-        ax.set_xlabel("Time (ms)")
-        ax.set_xscale("log")
-        ax.xaxis.set_major_formatter(mticker.FuncFormatter(log_tick_formatter))
-
-    # Set the y labels
-    for ax in axes[:, :2].flatten():
-        ax.set_ylabel(left_column_y_label)
-
-    fig.tight_layout()
-    fig.subplots_adjust(hspace=0.3)
-
-    # Add a broken log x-axis
-    if broken_logx_firstvalue:
-
-        # Plot the double normalized ojip curves
-        for i, strain in enumerate(plot_strains):
-            for j, condition in enumerate([c for c in plot_conditions if c in levels["conditions"][strain]]):
-
+            if include_analysis:
                 ax = axes[i,-1]
-                # Plot the VJ value
-                if j==0:
-                    ax.set_xscale("log")
 
-                    # Create a ne axis for the left side of the broken axis
-                    ax.set_xlim(ax.get_xlim()[0]*0.5)
-
-                    # Alternatively: Add an axis to the top to draw in
-                    pos = ax.get_position()
-                    ax.set_position([pos.x0+0.03, pos.y0, pos.width-0.03, pos.height])  # Increase height by 10%
-
-                    ax.spines['left'].set_visible(False)
-                    ax.tick_params(axis='y', which='both', left=False, right=False, labelleft=False)
-                    # ax.grid(visible=True, which="both", axis="x")
-                    # ax.yaxis.set_visible(False)
-                    
-                    brax = fig.add_axes([pos.x0, pos.y0, 0.02, pos.height])
-                    brax.sharey(ax)
-                    brax.spines['right'].set_visible(False)
-
-                    # Add broken indicator
-                    size_factor = ax.get_position().width / brax.get_position().width
-
-                    d = .015  # how big to make the diagonal lines in axes coordinates
-                    d_adj = d*size_factor
-                    # arguments to pass plot, just so we don't keep repeating them
-                    kwargs = dict(transform=ax.transAxes, color='k', clip_on=False)
-                    ax.plot((-d, +d), (1-d, 1+d), **kwargs)
-                    ax.plot((-d, +d), (-d, +d), **kwargs)
-
-                    kwargs.update(transform=brax.transAxes)  # switch to the bottom axes
-                    brax.plot((1-d_adj, 1+d_adj), (-d, +d), **kwargs)
-                    brax.plot((1-d_adj, 1+d_adj), (1-d, 1+d), **kwargs)
+                if broken_logx_firstvalue:
+                    treatments = levels["treatments"][strain][1:]
+                else:
+                    treatments = levels["treatments"][strain]
 
                 if plot_replicates:
                     for r, replicate in enumerate(levels["replicates"][(strain,condition)]):
                         try:
-                            dat = VJ_values.loc[didx(strain=strain, condition=condition,replicate=replicate,treatment=[levels["treatments"][strain][0]])].dropna()
+                            dat = VJ_values.loc[didx(strain=strain, condition=condition,replicate=replicate,treatment=treatments)].dropna()
                         except KeyError:
-                            brax.grid(which="both", axis="both")
+                            ax.grid(which="both")
                             continue
                         
                         treatment_levels = dat.index.get_level_values("Treatment").to_numpy()
 
-                        brax.plot(
+                        ax.plot(
                             treatment_levels,
                             dat,
                             marker=markers[condition],
@@ -712,21 +591,28 @@ def get_base_plot(
                             label=condition if r==0 else None,
                             c = plot_conditions_colors[condition]
                         )
-                        brax.grid(which="both", axis="both")
-
                 
                 else:
                     try:
-                        dat = VJ_values_meansd["mean"].loc[didx(strain=strain, condition=condition,replicate=None,treatment=[levels["treatments"][strain][0]])].dropna().droplevel([0,1,2])
+                        dat = VJ_values_meansd["mean"].loc[didx(strain=strain, condition=condition,replicate=None,treatment=treatments)].dropna().droplevel([0,1,2])
                     except KeyError:
-                        brax.grid(which="both", axis="both")
+                        ax.grid(which="both")
                         continue
                     
                     treatment_levels = dat.index.get_level_values("Treatment").to_numpy()
 
-                    dat_sd = VJ_values_meansd["sd"].loc[didx(strain=strain, condition=condition,replicate=None,treatment=[levels["treatments"][strain][0]])].dropna().droplevel([0,1,2])
+                    # ax.plot(
+                    #     treatment_levels,
+                    #     dat,
+                    #     marker="o",
+                    #     ls="-",
+                    #     label=condition,
+                    #     c = plot_conditions_colors[condition]
+                    # )
 
-                    brax.errorbar(
+                    dat_sd = VJ_values_meansd["sd"].loc[didx(strain=strain, condition=condition,replicate=None,treatment=treatments)].dropna().droplevel([0,1,2])
+
+                    ax.errorbar(
                         dat.index.to_numpy(),
                         dat,
                         yerr=dat_sd.to_numpy().flatten(),
@@ -740,10 +626,12 @@ def get_base_plot(
                     )
 
                     if not use_colorbar and mark_sampled:
-                        treatment = levels["treatments"][strain][0]
-                        if treatment in treatments_select:
-                        
-                            brax.errorbar(
+                        for k, treatment in enumerate(treatments):
+
+                            if treatment not in treatments_select:
+                                continue
+                            
+                            ax.errorbar(
                                 treatment,
                                 dat.loc[treatment],
                                 yerr=dat_sd.loc[treatment],
@@ -755,16 +643,158 @@ def get_base_plot(
                                 # markersize=8,
                                 ecolor='k',
                             )
-                    
 
-                # brax.set_xlim(-levels["treatments"][strain][1]*0.5, levels["treatments"][strain][1]*0.5)
-                brax.set_xticks([0])
-                brax.set_ylabel(right_column_y_label)
-                brax.grid(visible=True, which="both", axis="both")
-
+                ax.legend(loc=right_column_legend_loc)# prop={'size': 9})
+                ax.grid(which="both")
 
                 if right_column_mark_zero:
-                    brax.axhline(0, c="k", ls="--")
+                    ax.axhline(0, c="k", ls="--")
+    if include_analysis:
+        for ax in axes[:,-1]:
+            ax.grid(True)
+            if not broken_logx_firstvalue:
+                ax.set_ylabel(right_column_y_label)
+            else:
+                ax.xaxis.set_major_formatter(mticker.FuncFormatter(log_tick_formatter))
+
+            ax.set_xlabel(treatment_label)
+
+            # Set the given ylims
+            if feature_ymin is not None or feature_ymax is not None:
+                ax.set_ylim(feature_ymin, feature_ymax)
+
+    for ax in axes[:,:-1].flatten():
+        ax.set_xlabel("Time (ms)")
+        ax.set_xscale("log")
+        ax.xaxis.set_major_formatter(mticker.FuncFormatter(log_tick_formatter))
+
+    # Set the y labels
+    for ax in axes[:, :2].flatten():
+        ax.set_ylabel(left_column_y_label)
+
+    fig.tight_layout()
+    fig.subplots_adjust(hspace=0.3)
+
+    if include_analysis:
+        # Add a broken log x-axis
+        if broken_logx_firstvalue:
+
+            # Plot the double normalized ojip curves
+            for i, strain in enumerate(plot_strains):
+                for j, condition in enumerate([c for c in plot_conditions if c in levels["conditions"][strain]]):
+
+                    ax = axes[i,-1]
+                    # Plot the VJ value
+                    if j==0:
+                        ax.set_xscale("log")
+
+                        # Create a ne axis for the left side of the broken axis
+                        ax.set_xlim(ax.get_xlim()[0]*0.5)
+
+                        # Alternatively: Add an axis to the top to draw in
+                        pos = ax.get_position()
+                        ax.set_position([pos.x0+0.03, pos.y0, pos.width-0.03, pos.height])  # Increase height by 10%
+
+                        ax.spines['left'].set_visible(False)
+                        ax.tick_params(axis='y', which='both', left=False, right=False, labelleft=False)
+                        # ax.grid(visible=True, which="both", axis="x")
+                        # ax.yaxis.set_visible(False)
+                        
+                        brax = fig.add_axes([pos.x0, pos.y0, 0.02, pos.height])
+                        brax.sharey(ax)
+                        brax.spines['right'].set_visible(False)
+
+                        # Add broken indicator
+                        size_factor = ax.get_position().width / brax.get_position().width
+
+                        d = .015  # how big to make the diagonal lines in axes coordinates
+                        d_adj = d*size_factor
+                        # arguments to pass plot, just so we don't keep repeating them
+                        kwargs = dict(transform=ax.transAxes, color='k', clip_on=False)
+                        ax.plot((-d, +d), (1-d, 1+d), **kwargs)
+                        ax.plot((-d, +d), (-d, +d), **kwargs)
+
+                        kwargs.update(transform=brax.transAxes)  # switch to the bottom axes
+                        brax.plot((1-d_adj, 1+d_adj), (-d, +d), **kwargs)
+                        brax.plot((1-d_adj, 1+d_adj), (1-d, 1+d), **kwargs)
+
+                    if plot_replicates:
+                        for r, replicate in enumerate(levels["replicates"][(strain,condition)]):
+                            try:
+                                dat = VJ_values.loc[didx(strain=strain, condition=condition,replicate=replicate,treatment=[levels["treatments"][strain][0]])].dropna()
+                            except KeyError:
+                                brax.grid(which="both", axis="both")
+                                continue
+                            
+                            treatment_levels = dat.index.get_level_values("Treatment").to_numpy()
+
+                            brax.plot(
+                                treatment_levels,
+                                dat,
+                                marker=markers[condition],
+                                ls="-",
+                                label=condition if r==0 else None,
+                                c = plot_conditions_colors[condition]
+                            )
+                            brax.grid(which="both", axis="both")
+
+                    
+                    else:
+                        try:
+                            dat = VJ_values_meansd["mean"].loc[didx(strain=strain, condition=condition,replicate=None,treatment=[levels["treatments"][strain][0]])].dropna().droplevel([0,1,2])
+                        except KeyError:
+                            brax.grid(which="both", axis="both")
+                            continue
+                        
+                        treatment_levels = dat.index.get_level_values("Treatment").to_numpy()
+
+                        dat_sd = VJ_values_meansd["sd"].loc[didx(strain=strain, condition=condition,replicate=None,treatment=[levels["treatments"][strain][0]])].dropna().droplevel([0,1,2])
+
+                        brax.errorbar(
+                            dat.index.to_numpy(),
+                            dat,
+                            yerr=dat_sd.to_numpy().flatten(),
+                            marker=markers[condition],
+                            ls="-",
+                            label=conditions_map[condition],
+                            c = plot_conditions_colors[condition],
+                            markeredgecolor="k",
+                            ecolor='k',
+                            capsize=3
+                        )
+
+                        if not use_colorbar and mark_sampled:
+                            treatment = levels["treatments"][strain][0]
+                            if treatment in treatments_select:
+                            
+                                brax.errorbar(
+                                    treatment,
+                                    dat.loc[treatment],
+                                    yerr=dat_sd.loc[treatment],
+                                    marker=markers[condition],
+                                    ls="",
+                                    c = plot_conditions_colors[condition],
+                                    markeredgecolor="k",
+                                    markeredgewidth=2,
+                                    # markersize=8,
+                                    ecolor='k',
+                                )
+                        
+
+                    # brax.set_xlim(-levels["treatments"][strain][1]*0.5, levels["treatments"][strain][1]*0.5)
+                    brax.set_xticks([0])
+                    brax.set_ylabel(right_column_y_label)
+                    brax.grid(visible=True, which="both", axis="both")
+
+
+                    if right_column_mark_zero:
+                        brax.axhline(0, c="k", ls="--")
+
+    # Remove the unused axes
+    if not include_analysis:
+        for ax in axes[:,-1].flatten():
+            ax.remove()
+        axes = axes[:,:-1]
 
     # Add row labels
     for y, strain in zip(row_label_ys ,plot_strains):
@@ -774,7 +804,10 @@ def get_base_plot(
     for i, ax in enumerate(axes.flatten()):
         # y= 0.1 if (i+1)%3==0 else 0.9
         # ax.text(y,0.1,chr(65+i), transform=ax.transAxes, weight='bold', size=20)
-        x = 0.07 if not (broken_logx_firstvalue and (i+1)%3==0) else -0.03
+        if not include_analysis:
+            x = 0.07
+        else:
+            x = 0.07 if not (broken_logx_firstvalue and (i+1)%3==0) else -0.03
         ax.text(x,0.9,chr(65+i), transform=ax.transAxes, weight='bold', size=20)
 
     if light_phases is not None:
@@ -860,6 +893,7 @@ def get_base_plot_MV(
     ojip_ymax=None,
     feature_ymin=None,
     feature_ymax=None,
+    figsize=default_figsize,
 ):
 
     fig, axes = plt.subplots(
@@ -867,7 +901,7 @@ def get_base_plot_MV(
         3, 
         # sharex="col", 
         sharey="col",
-        figsize=(15,10),
+        figsize=figsize,
     )
 
     colornorm = lambda x:x
