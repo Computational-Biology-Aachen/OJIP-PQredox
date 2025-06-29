@@ -14,6 +14,13 @@ from matplotlib.patches import Rectangle
 
 from data_processing import didx
 
+label_bbox=dict(
+        boxstyle='round,pad=0.1',  # Rounded corners
+        facecolor='white',         # White background
+        edgecolor='none',          # No border
+        alpha=0.7                  # Semi-transparency
+    )
+
 def add_and_format_df(df, index, full_df, ind, files, index_fields, remeasured_df=None):
     file = files[index]
 
@@ -292,7 +299,7 @@ def _plot_normalized_OJIP(
     variance_sleeve_alpha=0.6,
     point_x_selector= ("inflection", "FJ_time"),
     point_y_selector= ("inflection", "FJ_value"),
-    point_label="Inflection point",
+    point_label="Inflection points",
     plot_replicates=False,
     legend=True,
     title=True,
@@ -396,7 +403,7 @@ def _plot_normalized_OJIP(
     if VJ_timing is not None:
         VJ_time = VJ_timing.loc[:, strain, condition].iloc[0]
         ax.axvline(VJ_time, c="k", ls="--", alpha=0.5)
-        ax.text(VJ_time*VJ_text_loc[0], VJ_text_loc[1], f"V$_{{J}}$ ({VJ_time:.2f} ms)", va="top", ha="right")
+        ax.text(VJ_time*VJ_text_loc[0], VJ_text_loc[1], f"F$_{{J}}$, F$_{{J}}$' ({VJ_time:.2f} ms)", va="top", ha="right", bbox=label_bbox)
 
     if legend:
         if use_colorbar:
@@ -434,7 +441,7 @@ def get_base_plot(
     cmap = cm.coolwarm,
     plot_strains = ["Syn", "Chlo"],
     row_label_ys = [1, 0.49],
-    right_column_y_label="V$_{J}$ (r.u.)",
+    right_column_y_label="V$_{J}$, V$_{J}$' (r.u.)",
     left_column_y_label = "Double normalized Fluorescence (r.u.)",
     right_column_mark_zero=False,
     strain_map = {
@@ -447,7 +454,7 @@ def get_base_plot(
     variance_sleeve_alpha=0.6,
     point_x_selector= ("inflection", "FJ_time"),
     point_y_selector= ("inflection", "FJ_value"),
-    point_label="Inflection point",
+    point_label="Inflection points",
     return_subplot_arguments=False,
     ojip_ymin=None,
     ojip_ymax=None,
@@ -847,7 +854,7 @@ def get_base_plot_MV(
     variance_sleeve_alpha=0.6,
     point_x_selector= ("inflection", "FJ_time"),
     point_y_selector= ("inflection", "FJ_value"),
-    point_label="Inflection point",
+    point_label="Inflection points",
     return_subplot_arguments=False,
     ojip_ymin=None,
     ojip_ymax=None,
@@ -1060,7 +1067,7 @@ def add_light_annotation_rectangle(lbax, start, end, light):
         va="center",
         ha="center",
         weight="bold",
-        size=7,
+        size=9,
         color=lightbarmap[light].get("labelcolor"),
         bbox=dict(facecolor=lightbarmap[light].get("facecolor"), alpha=0.5, edgecolor='none', pad=1)
         )
