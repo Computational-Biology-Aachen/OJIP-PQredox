@@ -21,7 +21,14 @@ label_bbox=dict(
         alpha=0.7                  # Semi-transparency
     )
 
-default_figsize=(15,10)
+# default_figsize=(15,10)
+# default_figsize=(6,4)
+default_figsize=(13,9)
+# plt.rcParams[""]
+
+plt.rcParams['axes.labelsize'] = 12
+plt.rcParams['xtick.labelsize'] = 11
+plt.rcParams['ytick.labelsize'] = 11
 
 def add_and_format_df(df, index, full_df, ind, files, index_fields, remeasured_df=None):
     file = files[index]
@@ -673,7 +680,7 @@ def get_base_plot(
         ax.set_ylabel(left_column_y_label)
 
     fig.tight_layout()
-    fig.subplots_adjust(hspace=0.3)
+    fig.subplots_adjust(hspace=0.4, wspace=0.2)
 
     if include_analysis:
         # Add a broken log x-axis
@@ -812,7 +819,7 @@ def get_base_plot(
 
     if light_phases is not None:
         for ax in axes[:, -1]:
-            ax.set_xlim(-25)
+            ax.set_xlim(-35)
 
             # Alternatively: Add an axis to the top to draw in
             pos = ax.get_position()
@@ -894,6 +901,7 @@ def get_base_plot_MV(
     feature_ymin=None,
     feature_ymax=None,
     figsize=default_figsize,
+    colornorm=None, # unused, added for compatibility
 ):
 
     fig, axes = plt.subplots(
@@ -1042,7 +1050,7 @@ def get_base_plot_MV(
         ax.set_ylabel(left_column_y_label)
 
     fig.tight_layout()
-    fig.subplots_adjust(hspace=0.3)
+    fig.subplots_adjust(hspace=0.4, wspace=0.2)
 
     # Add row labels
     for y, strain in zip(row_label_ys ,plot_strains):
@@ -1101,7 +1109,7 @@ def add_light_annotation_rectangle(lbax, start, end, light):
         va="center",
         ha="center",
         weight="bold",
-        size=9,
+        size=10,
         color=lightbarmap[light].get("labelcolor"),
         bbox=dict(facecolor=lightbarmap[light].get("facecolor"), alpha=0.5, edgecolor='none', pad=1)
         )
