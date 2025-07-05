@@ -314,6 +314,7 @@ def _plot_normalized_OJIP(
     title=True,
     VJ_text_loc=(0.8, 0),
     include_analysis=True,
+    time_marker_text="F$_{J}$, F$_{J}$'",
 ):
     for k, treatment in enumerate(levels["treatments"][strain]):
 
@@ -328,6 +329,7 @@ def _plot_normalized_OJIP(
                     dat = ojip_norm.loc[:, didx(strain=strain, condition=condition,replicate=replicate,treatment=treatment)].dropna()
                 except KeyError:
                     ax.grid(which="both")
+                    ax.grid(True, which='minor', alpha=0.5)
                     continue
 
                 ax.plot(
@@ -342,6 +344,7 @@ def _plot_normalized_OJIP(
                 dat = ojip_norm_meansd["mean"].loc[:, didx(strain=strain, condition=condition,replicate=None,treatment=treatment)].dropna()
             except KeyError:
                 ax.grid(which="both")
+                ax.grid(True, which='minor', alpha=0.5)
                 continue
 
             # Determine the data's label for the legend
@@ -421,6 +424,7 @@ def _plot_normalized_OJIP(
 
 
     ax.grid(which="both")
+    ax.grid(True, which='minor', alpha=0.5)
     if title:
         ax.set_title(f"{conditions_map[condition]}", loc="left", weight='bold', size=15)
 
@@ -428,7 +432,7 @@ def _plot_normalized_OJIP(
     if VJ_timing is not None:
         VJ_time = VJ_timing.loc[:, strain, condition].iloc[0]
         ax.axvline(VJ_time, c="k", ls="--", alpha=0.5)
-        ax.text(VJ_time*VJ_text_loc[0], VJ_text_loc[1], f"F$_{{J}}$, F$_{{J}}$' ({VJ_time:.2f} ms)", va="top", ha="right", bbox=label_bbox)
+        ax.text(VJ_time*VJ_text_loc[0], VJ_text_loc[1], f"{time_marker_text} ({VJ_time:.2f} ms)", va="top", ha="right", bbox=label_bbox)
 
     if legend:
         if use_colorbar:
@@ -487,7 +491,8 @@ def get_base_plot(
     feature_ymax=None,
     colornorm=None,
     include_analysis=True,
-    figsize=default_figsize
+    figsize=default_figsize,
+    time_marker_text="F$_{J}$, F$_{J}$'",
 ):
 
     fig, axes = plt.subplots(
@@ -565,6 +570,7 @@ def get_base_plot(
                 point_label=point_label,
                 plot_replicates=plot_replicates,
                 include_analysis=include_analysis,
+                time_marker_text=time_marker_text,
             )
 
             # Set the given ylims
@@ -586,6 +592,7 @@ def get_base_plot(
                             dat = VJ_values.loc[didx(strain=strain, condition=condition,replicate=replicate,treatment=treatments)].dropna()
                         except KeyError:
                             ax.grid(which="both")
+                            ax.grid(True, which='minor', alpha=0.5)
                             continue
                         
                         treatment_levels = dat.index.get_level_values("Treatment").to_numpy()
@@ -604,6 +611,7 @@ def get_base_plot(
                         dat = VJ_values_meansd["mean"].loc[didx(strain=strain, condition=condition,replicate=None,treatment=treatments)].dropna().droplevel([0,1,2])
                     except KeyError:
                         ax.grid(which="both")
+                        ax.grid(True, which='minor', alpha=0.5)
                         continue
                     
                     treatment_levels = dat.index.get_level_values("Treatment").to_numpy()
@@ -653,12 +661,14 @@ def get_base_plot(
 
                 ax.legend(loc=right_column_legend_loc)# prop={'size': 9})
                 ax.grid(which="both")
+                ax.grid(True, which='minor', alpha=0.5)
 
                 if right_column_mark_zero:
                     ax.axhline(0, c="k", ls="--")
     if include_analysis:
         for ax in axes[:,-1]:
             ax.grid(True)
+            ax.grid(True, which='minor', alpha=0.5)
             if not broken_logx_firstvalue:
                 ax.set_ylabel(right_column_y_label)
             else:
@@ -731,6 +741,7 @@ def get_base_plot(
                                 dat = VJ_values.loc[didx(strain=strain, condition=condition,replicate=replicate,treatment=[levels["treatments"][strain][0]])].dropna()
                             except KeyError:
                                 brax.grid(which="both", axis="both")
+                                brax.grid(True, which='minor', alpha=0.5)
                                 continue
                             
                             treatment_levels = dat.index.get_level_values("Treatment").to_numpy()
@@ -744,6 +755,7 @@ def get_base_plot(
                                 c = plot_conditions_colors[condition]
                             )
                             brax.grid(which="both", axis="both")
+                            brax.grid(True, which='minor', alpha=0.5)
 
                     
                     else:
@@ -751,6 +763,7 @@ def get_base_plot(
                             dat = VJ_values_meansd["mean"].loc[didx(strain=strain, condition=condition,replicate=None,treatment=[levels["treatments"][strain][0]])].dropna().droplevel([0,1,2])
                         except KeyError:
                             brax.grid(which="both", axis="both")
+                            brax.grid(True, which='minor', alpha=0.5)
                             continue
                         
                         treatment_levels = dat.index.get_level_values("Treatment").to_numpy()
@@ -792,6 +805,7 @@ def get_base_plot(
                     brax.set_xticks([0])
                     brax.set_ylabel(right_column_y_label)
                     brax.grid(visible=True, which="both", axis="both")
+                    brax.grid(True, which='minor', alpha=0.5)
 
 
                     if right_column_mark_zero:
@@ -902,6 +916,7 @@ def get_base_plot_MV(
     feature_ymax=None,
     figsize=default_figsize,
     colornorm=None, # unused, added for compatibility
+    time_marker_text="F$_{J}$, F$_{J}$'",
 ):
 
     fig, axes = plt.subplots(
@@ -972,6 +987,7 @@ def get_base_plot_MV(
                 point_y_selector= point_y_selector,
                 point_label=point_label,
                 plot_replicates=plot_replicates,
+                time_marker_text=time_marker_text
             )
 
             # Set the given ylims
@@ -991,6 +1007,7 @@ def get_base_plot_MV(
                     dat = VJ_values_meansd["mean"].loc[didx(strain=strain, condition=condition,replicate=None,treatment=treatments)].dropna().droplevel([0,1,2])
                 except KeyError:
                     ax.grid(which="both")
+                    ax.grid(True, which='minor', alpha=0.5)
                     continue
                 
                 treatment_levels = dat.index.get_level_values("Treatment").to_numpy()
@@ -1025,9 +1042,11 @@ def get_base_plot_MV(
 
             ax.legend(loc=right_column_legend_loc)# prop={'size': 9})
             ax.grid(which="both")
+            ax.grid(True, which='minor', alpha=0.5)
 
     for ax in axes[:,-1]:
         ax.grid(True, zorder=0)
+        ax.grid(True, which='minor', alpha=0.5)
         if not broken_logx_firstvalue:
             ax.set_ylabel(right_column_y_label)
         else:
